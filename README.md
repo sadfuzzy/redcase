@@ -8,7 +8,7 @@ Steps to install:
 
 Clone:
 ```
-$ cd redmine_path && git clone git@github.com:sadfuzzy/redmine-redcase.git plugins/redcase
+$ cd redmine_path && git clone git@github.com:sadfuzzy/redcase.git plugins/redcase
 ```
 
 Add gem to your Gemfile:
