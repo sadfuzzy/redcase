@@ -21,7 +21,10 @@
     <td style="width: 110px; vertical-align: middle; border-top-width: 0px; padding: 6px"><%= l('label_name') %></td>
     <td style="width: 80px; vertical-align: middle; border-top-width: 0px; padding: 6px"><%= l('label_date') %></td>
     <td style="width: 115px; vertical-align: middle; border-top-width: 0px; padding: 6px">
-      <%= select('filter_id', nil, ExecutionResult.all.collect { |x| [x.name, x.id] } << ['All results', 0], { :selected => 0 }, { :style => 'width: 100%' }) %>
+      <%= select('filter_id',
+                 nil,
+                 (ExecutionResult.all.collect { |x| [x.name, x.id] } << ['All results', 0]),
+                 { :selected => 0 }) %>
       <%= observe_field 'filter_id_', :function => "refresh()" %>
     </td>
     <td style="vertical-align: middle; border-top-width: 0px; padding: 6px"><%= l('label_executor') %></td>

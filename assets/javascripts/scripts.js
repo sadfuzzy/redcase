@@ -1,4 +1,4 @@
-var context = 'redcase/';
+var context = '';
 
 var jsProjectId;
 var jsCanEdit;
@@ -365,7 +365,7 @@ function onxMove(dropEvent) {
   else {
     conn.request(
         {
-          url: 'redcase/execution_suite_manager',
+          url: 'execution_suite_manager',
           method: 'GET',
           params: {
             'do': 'move',
@@ -409,7 +409,7 @@ function onCreate(b, e) {
       });
       conn.request(
           {
-            url: 'redcase/test_suite_manager',
+            url: 'test_suite_manager',
             method: 'GET',
             params: {
               'do': 'create',
@@ -449,7 +449,7 @@ function onDelete() {
   if (currentNode.isLeaf()) {
     conn.request(
         {
-          url: 'redcase/test_case_to_obsolete',
+          url: 'test_case_to_obsolete',
           method: 'POST',
           params: {
             'id': currentNode.attributes.issue_id,
@@ -467,7 +467,7 @@ function onDelete() {
   else {
     conn.request(
         {
-          url: 'redcase/test_suite_manager',
+          url: 'test_suite_manager',
           method: 'POST',
           params: {
             'do': 'delete',
@@ -501,7 +501,7 @@ function onCopyTo(b, e) {
   });
   conn.request(
       {
-        url: 'redcase/reassign_test_case',
+        url: 'reassign_test_case',
         method: 'GET',
         params: {
           'id': currentNode.attributes.issue_id,
@@ -530,7 +530,7 @@ function onxCreate(b, e) {
       });
       conn.request(
           {
-            url: 'redcase/execution_suite_manager',
+            url: 'execution_suite_manager',
             method: 'GET',
             params: {
               'do': 'create',
@@ -599,7 +599,7 @@ function onxDelete() {
   if (xcurrentNode.isLeaf()) {
     conn.request(
         {
-          url: 'redcase/delete_test_case_from_execution_suite',
+          url: 'delete_test_case_from_execution_suite',
           method: 'POST',
           params: {
             'id': xcurrentNode.attributes.issue_id,
@@ -623,7 +623,7 @@ function onxDelete() {
   else {
     conn.request(
         {
-          url: 'redcase/execution_suite_manager',
+          url: 'execution_suite_manager',
           method: 'POST',
           params: {
             'do': 'delete',
@@ -709,7 +709,7 @@ function getEditorSuite() {
     });
 
     conn.request({
-      url: 'redcase/test_suite_manager',
+      url: 'test_suite_manager',
       method: 'GET',
       params: {
         'do': 'rename',
@@ -746,7 +746,7 @@ function getEditorExec() {
       'X-CSRF-Token': csrf.getAttribute('content')
     });
     conn.request({
-      url: 'redcase/execution_suite_manager',
+      url: 'execution_suite_manager',
       method: 'GET',
       params: {
         'do': 'rename',
@@ -843,7 +843,7 @@ function execute() {
   });
   Element.show('ajax-indicator');
   conn.request({
-    url: 'redcase/execute',
+    url: 'execute',
     method: 'POST',
     params: {
       "id": node.attributes.issue_id,
@@ -887,7 +887,7 @@ function onExecSelectionChange(model, node) {
     Element.show('ajax-indicator');
     conn.request({
       waitMsg: 'loading test case info',
-      url: 'redcase/get_test_case',
+      url: 'get_test_case',
       method: 'GET',
       params: {
         "object_id": node.attributes.issue_id,
@@ -909,7 +909,7 @@ function onExecSelectionChange(model, node) {
 
         version = Ext.get('version');
         conn.request({
-          url: 'redcase/get_executions',
+          url: 'get_executions',
           method: 'GET',
           params: {
             "id": node.attributes.issue_id,
@@ -932,7 +932,7 @@ function onExecSelectionChange(model, node) {
           }
         });
         conn.request({
-          url: 'redcase/get_attachment_urls',
+          url: 'get_attachment_urls',
           method: 'GET',
           params: {
             "issue_id": node.attributes.issue_id,
@@ -1047,7 +1047,7 @@ function update_exe_tree() {
   Element.show('ajax-indicator');
   conn.request(
       {
-        url: 'redcase/index',
+        url: 'index',
         method: 'GET',
         params: {
           'ex': choosen,
@@ -1081,7 +1081,7 @@ function update_exe2_tree() {
 
   conn.request(
       {
-        url: 'redcase/index',
+        url: 'index',
         method: 'GET',
         params: {
           'ex': choosen,

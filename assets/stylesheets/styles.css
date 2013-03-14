@@ -385,3 +385,7 @@ a:hover img {
   line-height: inherit;
   font-size: inherit;
 }
+
+#filter_id {
+  width: 100%
+}

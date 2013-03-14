@@ -18,68 +18,99 @@ class RedcaseController < ApplicationController
   before_filter :find_project, :authorize
 
   def index
-    redcase_performance = RedcasePerformance.new
+    #redcase_performance = RedcasePerformance.new
 
     #redcase_performance.start('Getting all test suites and links')
-    all_test_suites = TestSuite.all(:include => [ { :test_cases => { :issue => [ :author, :priority, :status ] } } ] )
+    all_test_suites = TestSuite.all(:include => [{ :test_cases => { :issue => [:author, :priority, :status] } }])
     #redcase_performance.stop
 
     #redcase_performance.start('Getting all execution suites and links')
-    all_execution_suites = ExecutionSuite.all(:include => [ { :test_cases => { :issue => [ :author, :priority, :status ] } } ] )
+    all_execution_suites = ExecutionSuite.all(:include => [{ :test_cases => { :issue => [:author, :priority, :status] } }])
     #redcase_performance.stop
 
-    redcase_performance.start('Searching all other projects')
+    #redcase_performance.start('Searching all other projects')
+
     @other_projects = Project.all(:conditions => ['id <> ?', @project.id])
     @root = test_suite_root(@project)
     @execroot = execution_suite_root(@project)
     @version = get_last_version(@project)
     @environment = execution_environment_default(@project)
+
     get_graph_core(@version.id, @environment.id) unless @version.nil?
+
     all_issues = Issue.find_all_by_project_id(@project.id, :include => [:tracker, :test_case, :status])
-    obsoleted_issues = all_issues.select { |issue| (issue.tracker.name == 'Test case') and (issue.status.name == 'Obsolete') }
-    obsoleted_issues.each { |issue|
+
+    obsoleted_issues = all_issues.select { |issue| issue.tracker.name == 'Test case' && issue.status.name == 'Obsolete' }
+
+    obsoleted_issues.each do |issue|
+
       unless issue.test_case.nil?
+
         unless issue.test_case.test_suite.name == '.Obsolete'
           issue.test_case.test_suite = test_suite_obsolete(Project.find(params[:project_id]))
-          issue.test_case.save()
+          issue.test_case.save
         end
+
         unless issue.test_case.execution_suites.nil?
           issue.test_case.execution_suites.each { |x| x.test_cases.delete(issue.test_case) }
         end
+
       end
-    }
-    unlinked_issues = all_issues.select { |issue| (issue.tracker.name == 'Test case') and (issue.test_case.nil?) }
-    unlinked_issues.each { |issue|
+
+    end
+
+    unlinked_issues = all_issues.select { |issue| issue.tracker.name == 'Test case' && issue.test_case.nil? }
+
+    unlinked_issues.each do |issue|
+
       TestCase.create(:issue => issue, :test_suite => @root.children.detect { |o| o.name == '.Unsorted' })
-    }
+
+    end
 
     missed_tc = all_issues.collect { |issue|
-      tc = issue.test_case # TestCase.find_by_issue_id(issue.id)
-      tc if (tc && (issue.tracker.name != 'Test case'))
-    }.compact
+
+                  tc = issue.test_case # TestCase.find_by_issue_id(issue.id)
+                  tc if (tc && (issue.tracker.name != 'Test case'))
+
+                }.compact
+
     missed_tc.each { |tc| tc.destroy }
-    @list = ExecutionSuite.all.detect { |x| x.project == @project and x.parent == nil }
+
+    @list = ExecutionSuite.all.detect { |x| x.project == @project && x.parent == nil }
     @env = execution_environment_default(@project)
     @root_json = test_suite_to_json(@root)
     @exec_json = execution_suite_to_json(@execroot)
-    redcase_performance.stop
+
+    #redcase_performance.stop
 
     respond_to do |format|
       format.html
       format.json {
+
         if params[:node].to_i == @root.id
+
           ts = TestSuite.find(params[:node], :include => [:test_cases])
-          c = ts.children.select { |x| (x.name != '.Obsolete' and x.name != '.Unsorted') }.collect { |x| test_suite_to_json(x) } +
+
+          c = ts.children.select { |x| (x.name != '.Obsolete' && x.name != '.Unsorted') }.collect { |x| test_suite_to_json(x) } +
               ts.test_cases.collect { |tc| test_case_to_json(tc) } +
-              ts.children.select { |x| (x.name == '.Obsolete' or x.name == '.Unsorted') }.collect { |x| test_suite_to_json(x) }
+              ts.children.select { |x| (x.name == '.Obsolete' || x.name == '.Unsorted') }.collect { |x| test_suite_to_json(x) }
+
           render :json => c
+
         elsif params[:ex]
+
           render :json => execution_suite_to_json(ExecutionSuite.find(params[:ex]))
+
         else
+
           ts = TestSuite.find(params[:node], :include => [:test_cases])
+
           c = ts.children.collect { |x| test_suite_to_json(x) } + ts.test_cases.collect { |tc| test_case_to_json(tc) }
+
           render :json => c
+
         end
+
       }
     end
   end
@@ -95,36 +126,52 @@ class RedcaseController < ApplicationController
   end
 
   def test_suite_manager
-    case params[:do]
+
+    par_do = params[:do]
+    case par_do
     when 'create'
+
       @created = TestSuite.create(:name => params[:name], :parent_id => params[:parent_id])
+
       respond_to do |format|
         format.json { render :json => test_suite_to_json(@created) }
       end
+
     when 'delete'
+
       TestSuite.destroy(params[:id])
       redirect_to :action => 'index', :params => { 'project_id' => params[:project_id] }
+
     when 'move'
+
       x = TestSuite.find(params[:object_id])
       x.parent = TestSuite.find(params[:parent_id])
       x.save
+
       respond_to do |format|
         format.json { render :json => test_suite_to_json(x) }
       end
+
     when 'rename'
+
       ts = TestSuite.find(params[:test_suite_id])
       ts.name = params[:new_name]
       ts.save
+
       respond_to do |format|
         format.json { render :json => test_suite_to_json(ts) }
       end
+
     else # if 'move_test_case'
-      x = TestCase.find(:first, :conditions => 'issue_id = ' + params[:object_id])
+
+      x = TestCase.first(:conditions => ['issue_id = ?', params[:object_id]])
       x.test_suite = TestSuite.find(params[:parent_id])
       x.save
+
       respond_to do |format|
         format.json { render :json => test_case_to_json(x) }
       end
+
     end
   end
 
@@ -367,8 +414,10 @@ class RedcaseController < ApplicationController
   end
 
   def update_environment
-      puts @env.inspect
-    case params[:act]
+
+    act = params[:act]
+
+    case act
     when 'new'
 
       @env = ExecutionEnvironment.new(params[:env])
@@ -376,22 +425,26 @@ class RedcaseController < ApplicationController
       @env.save
 
     when 'save'
+
       @env = ExecutionEnvironment.find(params[:env][:id])
       @env.update_attributes(params[:env])
-      unless @env.project_id.nil?
-        @env.project_id = params[:project_id]
-      end
+      @env.project_id = params[:project_id] unless @env.project_id.nil?
       @env.save
+
     when 'delete'
+
       @env = ExecutionEnvironment.find(params[:env][:id])
       @env.destroy
       @env = execution_environment_default Project.find(params[:project_id])
+
     else
+
       @env = ExecutionEnvironment.find(params[:env_id])
+
     end
-      puts @env.inspect
 
     render :partial => 'management_environments'
+
   end
 
   def update_exelists
@@ -454,7 +507,7 @@ class RedcaseController < ApplicationController
 
     values = params[:all].values.collect { |x| 100 * x.to_i / count if x.to_i != 0 }.compact
     g = Graph.new
-    g.set_swf_path('plugin_assets/redcase/')
+    g.set_swf_path('/plugin_assets/redcase/')
     g.pie(60, '#505050', '{font-size: 12px; color: #404040; background-color: white}')
     g.pie_values(values, keys)
     g.set_tool_tip('#val#%')
@@ -491,9 +544,9 @@ class RedcaseController < ApplicationController
                  Project.find(params[:url][:project_id])
                end
 
-    unless User.current.allowed_to?(:view_test_cases, @project) && User.current.allowed_to?(:edit_test_cases, @project)
-      render_403
-    end
+    #unless User.current.allowed_to?(:view_test_cases, @project) && User.current.allowed_to?(:edit_test_cases, @project)
+    #  render_403
+    #end
   end
 
   def get_graph_core(version_id, environment_id)
@@ -504,9 +557,9 @@ class RedcaseController < ApplicationController
     TestCase.all(:include => [{ :execution_journals => [:result] }],
                  :joins => :issue,
                  :conditions => ['issues.project_id = ?', @project.id]).each do |tc|
-      
+
       jns = tc.execution_journals.select { |x| x.version_id == version_id and x.environment_id == environment_id }.compact
-      
+
       if jns.length > 0
         jns = jns.sort { |x, y| y.created_on - x.created_on }
         @all[jns[0].result.name] += 1
@@ -515,12 +568,12 @@ class RedcaseController < ApplicationController
         un_count += 1
       end
     end
-    
+
     @results = @results.compact
     @all['Not Executed'] = un_count
-    @graph = open_flash_chart_object(500, 500, url_for(:action => 'graph', 
-                                                       :project_id => @project.id, 
-                                                       :all => @all), true, 'plugin_assets/redcase/')
+    @graph = open_flash_chart_object(500, 500, url_for(:action => 'graph',
+                                                       :project_id => @project.id,
+                                                       :all => @all), true, '/plugin_assets/redcase/')
   end
 
 end

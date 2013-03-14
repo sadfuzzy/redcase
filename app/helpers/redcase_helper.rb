@@ -290,13 +290,10 @@ module RedcaseHelper
     #                         :act => act },
     #               :update => :management_environments_id,
     #               :submit => 'environment_form_id',
-    link_to image_tag(icon, :plugin => 'redcase', :size => size, :style => 'vertical-align: middle'),
-            :url => { :action => 'update_environment',
-                      :project_id => @project.id,
-                      :act => act }
-    #               :update => :management_environments_id,
-    #               :submit => 'environment_form_id',
     #               :complete => 'full()'
+
+    link_to image_tag(icon, :plugin => 'redcase', :size => size, :style => 'vertical-align: middle'),
+            redcase_update_environment_path(:project_id => @project.id, :act => act)
   end
 
   def get_last_version(project_id)
