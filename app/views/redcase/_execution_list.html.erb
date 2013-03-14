@@ -24,8 +24,7 @@
         </td>
         <td>
           <h3 class="execution-settings-version">
-            <%= select_tag 'version', options_for_select(Version.all(:conditions => ['project_id = ?', @project.id])
-                                                         .collect { |res| res.name }, @version.name) %>
+            <%= select_tag 'version', options_for_select(Version.all(:conditions => ['project_id = ?', @project.id]).collect { |res| res.name }, @version.name) %>
           </h3>
         </td>
       </tr>
@@ -38,8 +37,7 @@
         <td>
           <h3 class="execution-settings-environment">
             <%= select_tag 'environments', options_for_select(ExecutionEnvironment.all(:conditions => ['project_id = ?', @project.id],
-                                                                                       :order => 'name asc')
-                                                              .collect { |res| [res.name, res.id] }) %>
+                                                                                       :order => 'name asc').collect { |res| [res.name, res.id] }) %>
           </h3>
         </td>
       </tr>
