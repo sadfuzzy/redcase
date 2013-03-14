@@ -11,7 +11,7 @@ Clone:
 $ cd redmine_path && git clone git://github.com/sadfuzzy/redcase.git plugins/redcase
 ```
 
-Add gem to your Gemfile:
+Run the commands to add gems to your Gemfile:
 ```
 $ echo "gem 'prototype_legacy_helper', '0.0.0', :git => 'git://github.com/rails/prototype_legacy_helper.git'" >> Gemfile
 $ echo "gem 'prototype-rails'" >> Gemfile
