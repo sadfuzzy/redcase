@@ -1,3 +1,5 @@
+[![endorse](http://api.coderwall.com/sadfuzzy/endorsecount.png)](http://coderwall.com/sadfuzzy)
+
 redmine-redcase
 ===============
 
