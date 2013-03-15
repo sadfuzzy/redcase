@@ -575,7 +575,7 @@ function onxView() {
   conn.disableCaching = false;
   if (currentNode.isLeaf()) {
 
-    window.open('issues/' + currentNode.attributes.issue_id, 'test')
+    window.open('/issues/' + currentNode.attributes.issue_id, 'test')
   }
 
 
