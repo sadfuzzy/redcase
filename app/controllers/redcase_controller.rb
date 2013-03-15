@@ -176,37 +176,53 @@ class RedcaseController < ApplicationController
   end
 
   def execution_suite_manager
+
     case params[:do]
     when 'create'
+
       ExecutionSuite.create(:name => params[:name], :parent_id => params[:parent_id])
-      redirect_to :action => 'index', :params => { 'project_id' => params[:project_id] }
+      redirect_to redcase_index_path(:project_id => params[:project_id])
+
     when 'delete'
+
       ExecutionSuite.destroy(params[:id])
-      redirect_to :action => 'index', :params => { 'project_id' => params[:project_id] }
+      redirect_to redcase_index_path(:project_id => params[:project_id])
+
     when 'move'
+
       x = ExecutionSuite.find(params[:object_id])
       x.parent = ExecutionSuite.find(params[:parent_id])
       x.save
+
       respond_to do |format|
         format.json { render :json => execution_suite_to_json(x) }
       end
+
     when 'rename'
+
       es = ExecutionSuite.find(params[:exec_suite_id])
       es.name = params[:new_name]
       es.save
+
       respond_to do |format|
         format.json { render :json => execution_suite_to_json(es) }
       end
+
     else # if 'move_test_case'
+
       tc = TestCase.find(:first, :conditions => 'issue_id = ' + params[:object_id])
       x = ExecutionSuite.find(params[:owner_id])
       y = ExecutionSuite.find(params[:parent_id])
+
       y.test_cases << tc
       x.test_cases.delete(tc)
+
       respond_to do |format|
         format.json { render :json => execution_suite_to_json(y) }
       end
+
     end
+
   end
 
   def reassign_test_case
