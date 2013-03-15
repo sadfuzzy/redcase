@@ -21,11 +21,11 @@ class RedcaseController < ApplicationController
     #redcase_performance = RedcasePerformance.new
 
     #redcase_performance.start('Getting all test suites and links')
-    all_test_suites = TestSuite.all(:include => [{ :test_cases => { :issue => [:author, :priority, :status] } }])
+    #all_test_suites = TestSuite.all(:include => [{ :test_cases => { :issue => [:author, :priority, :status] } }])
     #redcase_performance.stop
 
     #redcase_performance.start('Getting all execution suites and links')
-    all_execution_suites = ExecutionSuite.all(:include => [{ :test_cases => { :issue => [:author, :priority, :status] } }])
+    #all_execution_suites = ExecutionSuite.all(:include => [{ :test_cases => { :issue => [:author, :priority, :status] } }])
     #redcase_performance.stop
 
     #redcase_performance.start('Searching all other projects')
@@ -44,14 +44,14 @@ class RedcaseController < ApplicationController
 
     obsoleted_issues.each do |issue|
 
-      unless issue.test_case.nil?
+      if issue.test_case
 
         unless issue.test_case.test_suite.name == '.Obsolete'
           issue.test_case.test_suite = test_suite_obsolete(Project.find(params[:project_id]))
           issue.test_case.save
         end
 
-        unless issue.test_case.execution_suites.nil?
+        if issue.test_case.execution_suites
           issue.test_case.execution_suites.each { |x| x.test_cases.delete(issue.test_case) }
         end
 
@@ -117,11 +117,13 @@ class RedcaseController < ApplicationController
 
   def execlist
     @project = Project.find(params[:project_id])
-    @other_projects = Project.find(:all, :conditions => 'id <> ' + @project.id.to_s)
+    @other_projects = Project.all(:conditions => ['id <> ?', @project.id])
     @execroot = execution_suite_root(@project)
+
     respond_to do |format|
       format.html
-      format.json { render :json => ExecutionSuite.find(params[:node]).children.collect { |es| execution_suite_to_json(es) } + ExecutionSuite.find(params[:node]).test_cases.collect { |tc| test_case_to_json(tc) } }
+      format.json { render :json => ExecutionSuite.find(params[:node]).children.collect { |es| execution_suite_to_json(es) } +
+          ExecutionSuite.find(params[:node]).test_cases.collect { |tc| test_case_to_json(tc) } }
     end
   end
 
@@ -140,7 +142,7 @@ class RedcaseController < ApplicationController
     when 'delete'
 
       TestSuite.destroy(params[:id])
-      redirect_to :action => 'index', :params => { 'project_id' => params[:project_id] }
+      redirect_to :action => :index, :params => { :project_id => params[:project_id] }
 
     when 'move'
 
@@ -164,7 +166,7 @@ class RedcaseController < ApplicationController
 
     else # if 'move_test_case'
 
-      x = TestCase.first(:conditions => ['issue_id = ?', params[:object_id]])
+      x = TestCase.first(:conditions => { :issue_id => params[:object_id] })
       x.test_suite = TestSuite.find(params[:parent_id])
       x.save
 
@@ -210,7 +212,7 @@ class RedcaseController < ApplicationController
 
     else # if 'move_test_case'
 
-      tc = TestCase.find(:first, :conditions => 'issue_id = ' + params[:object_id])
+      tc = TestCase.first(:conditions => { :issue_id => params[:object_id] })
       x = ExecutionSuite.find(params[:owner_id])
       y = ExecutionSuite.find(params[:parent_id])
 
@@ -230,22 +232,30 @@ class RedcaseController < ApplicationController
     ts = tc.test_suite
     col = []
     parent = ts
+
     while parent != test_suite_root(Project.find(params[:real_project_id])) do
       col << parent
       parent = parent.parent
     end
+
     col = col.reverse
     nts = test_suite_root(Project.find(params[:project_id]))
-    col.each { |x|
+
+    col.each do |x|
+
       det = nts.children.detect { |y| y.name == x.name }
+
       unless det
         det = TestSuite.new(:name => x.name)
         nts.children << det
         det.reload
       end
+
       nts = det
       nts.reload
-    }
+
+    end
+
     ois = Issue.find(params[:id])
     #is = Issue.create(:project_id => params[:project_id], :subject => ois.subject, :tracker_id => ois.tracker_id, :author_id => ois.author_id)
     is = Issue.create(:project_id => params[:project_id],
@@ -255,38 +265,42 @@ class RedcaseController < ApplicationController
                       :priority_id => ois.priority_id,
                       :subject => ois.subject)
     TestCase.create(:issue => is, :test_suite => nts)
-    redirect_to :action => 'index', :params => { 'project_id' => params[:real_project_id] }
+
+    redirect_to :action => :index, :params => { :project_id => params[:real_project_id] }
   end
 
   def copy_test_case_to_exec
-    tc = TestCase.find(:first, :conditions => 'issue_id = ' + params[:object_id])
+    tc = TestCase.first(:conditions => { :issue_id => params[:object_id] })
     y = ExecutionSuite.find(params[:parent_id])
     y.test_cases << tc
+
     respond_to do |format|
       format.json { render :json => execution_suite_to_json(y) }
     end
   end
 
   def delete_test_case_from_execution_suite
-    tc = TestCase.find(:first, :conditions => 'issue_id = ' + params[:id])
+    tc = TestCase.first(:conditions => { :issue_id => params[:id] })
     x = ExecutionSuite.find(params[:suite_id])
     x.test_cases.delete(tc)
+
     respond_to do |format|
       format.json { render :json => execution_suite_to_json(x) }
     end
   end
 
   def test_case_to_obsolete
-    tc = TestCase.find(:first, :conditions => 'issue_id = ' + params[:id])
+    tc = TestCase.first(:conditions => 'issue_id = ' + params[:id])
     tc.test_suite = test_suite_obsolete(Project.find(params[:project_id]))
     tc.save
+
     respond_to do |format|
       format.json { render :json => test_case_to_json(tc) }
     end
   end
 
   def get_test_case
-    tc = TestCase.find(:first, :conditions => 'issue_id = ' + params[:object_id])
+    tc = TestCase.first(:conditions => 'issue_id = ' + params[:object_id])
     respond_to do |format|
       format.json { render :json => test_case_to_json(tc) }
     end
@@ -296,13 +310,15 @@ class RedcaseController < ApplicationController
     @environment = ExecutionEnvironment.find(params[:environment_id])
     @version = Version.find(params[:version_id])
     issues = Issue.find_all_by_project_id(@project.id).collect { |i| i.id }
-    test_cases = TestCase.find(:all, :conditions => { :issue_id => issues })
+    test_cases = TestCase.all(:conditions => { :issue_id => issues })
     @all_res = {}
     @results = []
+
     test_cases.each do |tc|
       found = ExecutionJournal.find_by_test_case_id_and_environment_id_and_version_id(tc.id, @environment.id, @version.id, :order => 'created_on desc')
       @results << found
     end
+
     @results = @results.compact
     render :partial => 'report_results'
   end
@@ -322,13 +338,15 @@ class RedcaseController < ApplicationController
   def get_executions
     test_case = TestCase.find_by_issue_id(params[:id])
     respond_to do |format|
-      format.json { render :json => ExecutionJournal.all(:order => 'created_on desc', :conditions => 'test_case_id = ' + test_case.id.to_s).collect { |j| execution_journal_to_json(j) } }
+      format.json { render :json => ExecutionJournal.all(:order => 'created_on desc',
+                                                         :conditions => 'test_case_id = ' + test_case.id.to_s).collect { |j| execution_journal_to_json(j) } }
     end
   end
 
   def get_attachment_urls
     issue = Issue.find(params[:issue_id])
-    result = issue.attachments.collect { |x| { :url => url_for(:controller => 'attachments', :action => x.id), :name => x.filename } }
+    result = issue.attachments.collect { |x| { :url => url_for(:controller => 'attachments', :action => x.id),
+                                               :name => x.filename } }
     respond_to do |format|
       format.json { render :json => result }
     end
@@ -336,34 +354,36 @@ class RedcaseController < ApplicationController
 
   def export_to_excel2
     issues = Issue.find_all_by_project_id(@project.id, :order => 'id asc').collect { |issue| issue.id }
-    test_cases = TestCase.find(:all, :conditions => { :issue_id => issues })
+    test_cases = TestCase.all(:conditions => { :issue_id => issues })
     versions = Version.find(params[:version_id])
     environments = ExecutionEnvironment.find(params[:environment_id])
     rows = []
     rows << (['ID'] + ['Suite'] + ['Title'] + ["#{versions.name}"+"(#{environments.name})"] + ['Comment']).flatten
     test_cases = test_cases.sort! { |a, b| a.test_suite.name <=> b.test_suite.name }
-    test_cases.each { |test_case|
+    test_cases.each do |test_case|
+
       row = []
       row << "##{test_case.issue.id}"
       row << test_case.test_suite.name
       row << "#{test_case.issue.subject}"
 
       found = ExecutionJournal.find_by_test_case_id_and_environment_id_and_version_id(test_case.id, environments.id, versions.id, :order => 'created_on desc')
-      row << ((not found) ? 'Not Executed' : found.result.name)
-      if found
-        if found.comment
-          row << found.comment
-        else
-          row << ''
-        end
-
-      else
-        row << ''
-      end
+      row << found ? found.result.name : 'Not Executed'
+      row << if found
+               if found.comment
+                 found.comment
+               else
+                 ''
+               end
+             else
+               ''
+             end
       rows << row.clone
-    }
+
+    end
+
     buffer = ''
-    rows.each { |row| buffer += CSV.generate_line(row) }
+    rows.each { |r| buffer += CSV.generate_line(r) }
     project_name = @project.name.gsub(' ', '_')
     send_data(buffer, { :filename => "TCReport-#{project_name}-#{Time.now.strftime('%d%m%Y-%I%M%S')}.csv" })
   end
@@ -437,7 +457,7 @@ class RedcaseController < ApplicationController
     when 'new'
 
       @env = ExecutionEnvironment.new(params[:env])
-      @env.project_id = params[:project_id]
+      @env.project = Project.first(params[:project_id])
       @env.save
 
     when 'save'
@@ -503,25 +523,26 @@ class RedcaseController < ApplicationController
     values = []
     params[:all].each { |key, value| count += value.to_i }
     keys = params[:all].collect { |key, value| "#{key} (#{value})" if value.to_i != 0 }.compact
-    color=[]
+    color = []
     params[:all].each do |key, value|
       if value.to_i != 0
-        case key
-        when 'Failed'
-          color << '#FF9999'
-        when 'Passed'
-          color << '#99FF33'
-        when 'Blocked'
-          color << '#9999CC'
-        when 'Not Executed'
-          color << '#FFFFFF'
-        else # if "Not Available"
-          color << '#000000'
-        end
+        color << case key
+                 when 'Failed'
+                   '#FF9999'
+                 when 'Passed'
+                   '#99FF33'
+                 when 'Blocked'
+                   '#9999CC'
+                 when 'Not Executed'
+                   '#FFFFFF'
+                 else # if "Not Available"
+                   '#000000'
+                 end
       end
     end
 
     values = params[:all].values.collect { |x| 100 * x.to_i / count if x.to_i != 0 }.compact
+
     g = Graph.new
     g.set_swf_path('/plugin_assets/redcase/')
     g.pie(60, '#505050', '{font-size: 12px; color: #404040; background-color: white}')
@@ -529,6 +550,7 @@ class RedcaseController < ApplicationController
     g.set_tool_tip('#val#%')
     g.set_bg_color('#ffffff')
     g.pie_slice_colors(color)
+
     render :text => g.render
   end
 
@@ -536,18 +558,21 @@ class RedcaseController < ApplicationController
     @environment = ExecutionEnvironment.find(params[:environment_id])
     @version = Version.find(params[:version_id])
     get_graph_core(@version.id, @environment.id)
+
     render :text => @graph
   end
 
   def update_combos
     @environment = ExecutionEnvironment.find(params[:environment_id])
     @version = Version.find(params[:version_id])
+
     render :partial => 'report_combos'
   end
 
   def update_combos2
     @environment = ExecutionEnvironment.find(params[:environment_id])
     @version = Version.find(params[:version_id])
+
     render :partial => 'report_download_button'
   end
 
