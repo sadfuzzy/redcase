@@ -12,7 +12,7 @@ $ cd redmine_path && git clone git://github.com/sadfuzzy/redcase.git plugins/red
 ```
 Run bundle:
 ```
-$ bundle install
+$ bundle install --path vendor/bundle
 ```
 Run migrations:
 ```
