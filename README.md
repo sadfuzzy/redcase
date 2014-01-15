@@ -1,6 +1,6 @@
 [![endorse](http://api.coderwall.com/sadfuzzy/endorsecount.png)](http://coderwall.com/sadfuzzy)
 
-# Redcase Plugin for Redmine
+# Redcase Plugin for Redmine (sorry, have no time for support, feel free to fork and edit)
 
 Redmine Redcase is a Plugin for managing test cases.
 
